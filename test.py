@@ -1,7 +1,8 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import sys
 from pyfat import mbr
+from pyfat import fat
 
 
 if __name__ == '__main__':
@@ -14,6 +15,12 @@ if __name__ == '__main__':
         mbr_sector = f12.read(mbr.MBR_SIZE)
         mbr12 = mbr.MBR12(mbr_sector)
         print(mbr12)
+
+        # fat = fat.FAT12('2M.vol', mbr12.info['reserved_sectors'], 
+        #                 mbr12.info['media_desc'], mbr12.info['sector_bytes'],
+        #                 mbr12.info['fat_sectors'])
+
+        # print(fat.file_clusters(4))
 
     sys.stdout.write('** FAT16 **\n')
     with open('100M.vol', 'rb') as f16:

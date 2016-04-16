@@ -1,3 +1,4 @@
 *.pyc
 *.pyo
 *.vol
+.DS_Store

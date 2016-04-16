@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import struct
 from . import error
@@ -12,7 +12,7 @@ class MBR(object):
     def __init__(self, sector):
         assert len(sector) == MBR_SIZE
         if ord(sector[510]) != 0x55 or ord(sector[511]) != 0xAA:
-            raise error.FormatError("Incorrect FAT signature!")
+            raise error.FormatError("Incorrect FAT MBR signature!")
 
         data = struct.unpack('<3x8sHBHBHHBHHHH',  sector[:30])
         self._info = {}
