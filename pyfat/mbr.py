@@ -3,9 +3,7 @@
 import struct
 from . import error
 
-
 MBR_SIZE = 512
-
 
 class MBR(object):
 
@@ -13,7 +11,6 @@ class MBR(object):
         assert len(sector) == MBR_SIZE
         if ord(sector[510]) != 0x55 or ord(sector[511]) != 0xAA:
             raise error.FormatError("Incorrect FAT MBR signature!")
-
         data = struct.unpack('<3x8sHBHBHHBHHHH',  sector[:30])
         self._info = {}
         self._info['oem'] = data[0]
@@ -48,7 +45,6 @@ class MBR(object):
         s += 'Hidden sectors: {}\n'.format(self._info['hidden_sectors'])
         return s
 
-
 class MBR12(MBR):
 
     def __init__(self, sector):
@@ -56,7 +52,6 @@ class MBR12(MBR):
         extend_sig = False
         if ord(sector[38]) == 0x29:
             extend_sig = True
-
         data = struct.unpack('<39xL11s8s', sector[:62])
         self._info['partition_serial'] = data[0] if extend_sig else 0
         self._info['label'] = data[1] if extend_sig else 0
@@ -69,7 +64,6 @@ class MBR12(MBR):
         s += 'Filesystem type: {}\n'.format(self._info['type'])
         return s
 
-
 class MBR16(MBR):
 
     def __init__(self, sector):
@@ -77,7 +71,6 @@ class MBR16(MBR):
         extend_sig = False
         if ord(sector[38]) == 0x28 or ord(sector[38]) == 0x29:
             extend_sig = True
-
         data = struct.unpack('<28xLL3xL11s8s', sector[:62])
         self._info['hidden_sectors'] = data[0]
         self._info['total_sectors'] = data[1]
@@ -100,7 +93,6 @@ class MBR32(MBR):
         extend_sig = False
         if ord(sector[66]) == 0x29:
             extend_sig = True
-
         data = struct.unpack('<28xLLL2x2xL2x2x12x3xL11s8s', sector[:90])
         self._info['hidden_sectors'] = data[0]
         self._info['total_sectors'] = data[1]

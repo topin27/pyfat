@@ -2,8 +2,6 @@
 
 import struct
 from . import error
-import pdb
-
 
 class FAT(object):
 
@@ -21,7 +19,6 @@ class FAT(object):
         if not self._fd:
             self._fd.close()
 
-
 class FAT12(FAT):
 
     ENTRY_SIZE = 1.5
@@ -38,14 +35,11 @@ class FAT12(FAT):
         if (start_cluster < 0x0002 or start_cluster in FAT12.ClusterFlag.BAD or 
             start_cluster in FAT12.ClusterFlag.RESERVED):
             return []
-
         end_cluster = start_cluster
         clusters = [end_cluster, ]
-        pdb.set_trace()
         while end_cluster not in FAT12.ClusterFlag.LAST:
             end_cluster = self._fetch_entry(end_cluster)
             clusters.append(end_cluster)
-
         return clusters
 
     def _fetch_entry(self, cluster_number):
@@ -54,14 +48,12 @@ class FAT12(FAT):
         entry = entry & 0xfff0
         return entry
 
-
 class FAT16(FAT):
 
     ENTRY_SIZE = 16
 
     def __init__(self, path, begin, sector_bytes, fat_sectors):
         super(FAT16, self).__init__(path, begin, sector_bytes, fat_sectors)
-
 
 class FAT32(FAT):
 

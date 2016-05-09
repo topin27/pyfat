@@ -3,7 +3,6 @@
 class Error(Exception):
     pass
 
-
 class FormatError(Error):
     def __init__(self, message):
         super(FormatError, self).__init__()
