@@ -2,3 +2,4 @@
 *.pyo
 *.vol
 .DS_Store
+*.swp

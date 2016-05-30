@@ -10,7 +10,7 @@ class FAT(object):
         self._fd = open(path, 'rw+')
         self._fd.seek(begin * sector_bytes)
         if media_desc != ord(self._fd.read(1)[0]):
-            self._fd.close()	# FIXME: Is it need close()?
+            self._fd.close()
             raise error.FormatError("Incorrect FAT signature!")
         self._begin = begin
         self._sector_bytes = sector_bytes

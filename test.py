@@ -17,7 +17,7 @@ if __name__ == '__main__':
                       mbr12.info['media_desc'], mbr12.info['sector_bytes'],
                       mbr12.info['fat_sectors'])
 
-    print(fat12.file_clusters(2))
+    print(fat12.file_clusters(3))
     # print(hex(fat12._fetch_entry(6)))
 
     # sys.stdout.write('** FAT16 **\n')
