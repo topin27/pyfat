@@ -16,6 +16,9 @@ class FAT(object):
         self._sector_bytes = sector_bytes
         self._fat_sectors = fat_sectors
 
+    def file_clusters(self, start_cluster):
+        raise NotImplementedError()
+
     def __del__(self):
         if not self._fd:
             self._fd.close()
