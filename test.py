@@ -3,6 +3,7 @@
 import sys
 from pyfat import mbr
 from pyfat import fat
+from pyfat import rd
 
 
 if __name__ == '__main__':
@@ -17,8 +18,11 @@ if __name__ == '__main__':
                       mbr12.info['media_desc'], mbr12.info['sector_bytes'],
                       mbr12.info['fat_sectors'])
 
-    print(fat12.file_clusters(3))
-    # print(hex(fat12._fetch_entry(6)))
+    rd_begin = (mbr12.info['reserved_sectors'] + \
+                mbr12.info['fat_number'] * mbr12.info['fat_sectors']) * \
+                mbr12.info['sector_bytes']
+    rd12 = rd.RootDirs12('2M.vol', rd_begin, mbr12.info['rentry_number'])
+    rd12.build_entries()
 
     # sys.stdout.write('** FAT16 **\n')
     # with open('100M.vol', 'rb') as f16:
