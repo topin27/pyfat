@@ -3,110 +3,116 @@
 import struct
 from . import error
 
+
 MBR_SIZE = 512
+
 
 class MBR(object):
 
     def __init__(self, sector):
         assert len(sector) == MBR_SIZE
+
         if ord(sector[510]) != 0x55 or ord(sector[511]) != 0xAA:
             raise error.FormatError("Incorrect FAT MBR signature!")
-        data = struct.unpack('<3x8sHBHBHHBHHHH',  sector[:30])
-        self._info = {}
-        self._info['oem'] = data[0]
-        self._info['sector_bytes'] = data[1]
-        self._info['cluster_sectors'] = data[2]
-        self._info['reserved_sectors'] = data[3]    # 1 for FAT12 and FAT16, 32 for FAT32
-        self._info['fat_number'] = data[4]
-        self._info['rentry_number'] = data[5]
-        self._info['total_sectors'] = data[6]
-        self._info['media_desc'] = data[7]
-        self._info['fat_sectors'] = data[8]
-        self._info['track_sectors'] = data[9]
-        self._info['heads_number'] = data[10]
-        self._info['hidden_sectors'] = data[11]
 
-    @property
-    def info(self):
-        return self._info
+        self.bpb = {}
 
     def __str__(self):
-        s = 'OEM name: {}\n'.format(self._info['oem'])
-        s += 'Bytes per Sector: {}\n'.format(self._info['sector_bytes'])
-        s += 'Sectors per Cluster: {}\n'.format(self._info['cluster_sectors'])
-        s += 'Number of Reserved Sectors: {}\n'.format(self._info['reserved_sectors'])
-        s += 'Number of FAT copies: {}\n'.format(self._info['fat_number'])
-        s += 'Number of root directory entries: {}\n'.format(self._info['rentry_number'])
-        s += 'Total number of sectors: {}\n'.format(self._info['total_sectors'])
-        s += 'Media descriptor: {}\n'.format(hex(self._info['media_desc']))
-        s += 'Sectors per FAT: {}\n'.format(self._info['fat_sectors'])
-        s += 'Sectors per track: {}\n'.format(self._info['track_sectors'])
-        s += 'Number of heads: {}\n'.format(self._info['heads_number'])
-        s += 'Hidden sectors: {}\n'.format(self._info['hidden_sectors'])
+        s = ''
+        for k, v in self.bpb.items():
+            s += '{}: {}\n'.format(k, v)
         return s
+
+
+def _init_fat12or16_mbr(sector):
+    data = struct.unpack('<3x8sHBHBHHBHHHLL3xL11s8s', sector[:62])
+    return {
+        'oem': data[0].strip(),
+        'sector_bytes': data[1],
+        'cluster_sectors': data[2],
+        'reserved': data[3],
+        'fat_count': data[4],
+        'rentries': data[5],
+        'media_type': data[7],
+        'fat_sectors': data[8],
+        'track_sectors': data[9],
+        'head_count': data[10],
+        'hidden_sectors': data[11],
+        'serial': data[13],
+        'label': data[14],
+        'fs_type': data[15].strip(),
+    }
+
 
 class MBR12(MBR):
 
     def __init__(self, sector):
         super(MBR12, self).__init__(sector)
-        extend_sig = False
-        if ord(sector[38]) == 0x29:
-            extend_sig = True
-        data = struct.unpack('<39xL11s8s', sector[:62])
-        self._info['partition_serial'] = data[0] if extend_sig else 0
-        self._info['label'] = data[1] if extend_sig else 0
-        self._info['type'] = data[2] if extend_sig else 0
+        self.bpb = _init_fat12or16_mbr(sector)
 
-    def __str__(self):
-        s = super(MBR12, self).__str__()
-        s += 'Serial number of partition: {}\n'.format(hex(self._info['partition_serial']))
-        s += 'Volume label: {}\n'.format(self._info['label'])
-        s += 'Filesystem type: {}\n'.format(self._info['type'])
-        return s
 
 class MBR16(MBR):
 
     def __init__(self, sector):
         super(MBR16, self).__init__(sector)
-        extend_sig = False
-        if ord(sector[38]) == 0x28 or ord(sector[38]) == 0x29:
-            extend_sig = True
-        data = struct.unpack('<28xLL3xL11s8s', sector[:62])
-        self._info['hidden_sectors'] = data[0]
-        self._info['total_sectors'] = data[1]
-        self._info['partition_serial'] = data[2] if extend_sig else 0
-        self._info['label'] = data[3] if extend_sig else 0
-        self._info['type'] = data[4] if extend_sig else 0
-
-    def __str__(self):
-        s = super(MBR16, self).__str__()
-        s += 'Serial number of partition: {}\n'.format(hex(self._info['partition_serial']))
-        s += 'Volume label: {}\n'.format(self._info['label'])
-        s += 'Filesystem type: {}\n'.format(self._info['type'])
-        return s
+        self.bpb = _init_fat12or16_mbr(sector)
 
 
 class MBR32(MBR):
 
     def __init__(self, sector):
         super(MBR32, self).__init__(sector)
-        extend_sig = False
-        if ord(sector[66]) == 0x29:
-            extend_sig = True
-        data = struct.unpack('<28xLLL2x2xL2x2x12x3xL11s8s', sector[:90])
-        self._info['hidden_sectors'] = data[0]
-        self._info['total_sectors'] = data[1]
-        self._info['fat_sectors'] = data[2]
-        self._info['mirror_flags'] = sector[40:42]
-        self._info['1st_cluster'] = data[3]     # of root directory
-        self._info['partition_serial'] = data[4] if extend_sig else 0
-        self._info['label'] = data[5] if extend_sig else 0
-        self._info['type'] = data[6] if extend_sig else 0
+        data = struct.unpack('<3x8sHBHB4xB2xHHLLLH2xL19xL11s8s', sector[:90])
+        self.bpb = {
+            'oem': data[0].strip(),
+            'sector_bytes': data[1],
+            'cluster_sectors': data[2] if data[2] != 0 else data[9],
+            'reserved': data[3],
+            'fat_count': data[4],
+            'media_type': data[5],
+            'track_sectors': data[6],
+            'head_count': data[7],
+            'hidden_sectors': data[8],
+            'fat_sectors': data[10],
+            # 'other': data[11],
+            'rd_1stcluster': data[12],   # Cluster number of the first cluster of the rd
+            'serial': data[13],
+            'label': data[14],
+            'fs_type': data[15].strip(),
+        }
+
+
+FSINFO_SIZE = 512
+
+
+class FSInfo(object):
+
+    def __init__(self, sector):
+        assert(len(sector) == FSINFO_SIZE)
+
+        def verify_signature(s):
+            first_one = [ord(x) for x in s[0:4]]
+            if first_one != [0x52, 0x52, 0x61, 0x41]:
+                return False
+
+            second_one = [ord(x) for x in s[484:488]]
+            if second_one != [0x72, 0x72, 0x41, 0x61]:
+                return False
+
+            third_one = [ord(x) for x in s[508:512]]
+            if third_one != [0x00, 0x00, 0x55, 0xaa]:
+                return False
+
+            return True
+
+        if not verify_signature(sector):
+            raise error.FormatError('Incorrect FSInfo signature')
+
+        data = struct.unpack('<488xLL16x', sector)
+        self.last_free = data[0]       # Last free cluster on the volume
+        self.free_cluster = data[1]    # Indicates where FAT should look for free clusters
 
     def __str__(self):
-        s = super(MBR32, self).__str__()
-        s += 'First cluster of root directory: {}\n'.format(self._info['1st_cluster'])
-        s += 'Serial number of partition: {}\n'.format(hex(self._info['partition_serial']))
-        s += 'Volume label: {}\n'.format(self._info['label'])
-        s += 'Filesystem type: {}\n'.format(self._info['type'])
+        s = 'last_free: {}\n'.format(self.last_free)
+        s += 'free_cluster: {}\n'.format(self.free_cluster)
         return s

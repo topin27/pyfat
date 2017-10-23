@@ -3,3 +3,5 @@
 *.vol
 .DS_Store
 *.swp
+tags
+TAGS

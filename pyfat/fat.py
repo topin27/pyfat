@@ -1,27 +1,46 @@
 #!/usr/bin/env python
 
 import struct
+from functools import wraps
 from . import error
 
 
 class FAT(object):
 
-    def __init__(self, path, begin, media_desc, sector_bytes, fat_sectors):
-        self._fd = open(path, 'rw+')
-        self._fd.seek(begin * sector_bytes)
-        if media_desc != ord(self._fd.read(1)[0]):
-            self._fd.close()
-            raise error.FormatError("Incorrect FAT signature!")
-        self._begin = begin
-        self._sector_bytes = sector_bytes
-        self._fat_sectors = fat_sectors
+    def __init__(self, fd, offset, length):
+        self._fd = fd
+        self._off = offset
+        self._len = length
 
-    def file_clusters(self, start_cluster):
-        raise NotImplementedError()
+    def _set_pad(self, pad):
+        def decorator(func):
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                return func()
+            return wrapper
+        return decorator
 
-    def __del__(self):
-        if not self._fd:
-            self._fd.close()
+
+def test(fd, offset, length, l):
+    buf = fd.read(l)
+    curr = offset
+    while curr < length:
+        buf = fd.read(l)
+        yield buf
+        curr += l
+
+
+class FAT12(FAT):
+
+    ENTRY_BIT_SIZE = 12
+
+    class _Flag(object):
+        BAD = (0x0ff7,)
+        RESERVED = tuple([0x0ff0 + x for x in xrange(7)])
+        LAST = tuple([0x0ff8 + x for x in xrange(8)])
+
+    def __init__(self, fd, offset, length):
+        super(FAT12, self).__init__(fd, offset, length)
 
 
 class FAT12(FAT):
@@ -38,8 +57,8 @@ class FAT12(FAT):
 
     # TODO: Use generator
     def file_clusters(self, start_cluster):
-        if (start_cluster < 0x0002 or start_cluster in FAT12.ClusterFlag.BAD or 
-            start_cluster in FAT12.ClusterFlag.RESERVED):
+        if (start_cluster < 0x0002 or start_cluster in FAT12.ClusterFlag.BAD or
+                start_cluster in FAT12.ClusterFlag.RESERVED):
             return []
         end_cluster = start_cluster
         clusters = [end_cluster, ]
